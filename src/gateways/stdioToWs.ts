@@ -34,21 +34,30 @@ const joinPath = (base: string, suffix: string) => {
   return `${normalizedBase}${normalizedSuffix}` || '/'
 }
 
-export async function stdioToWs(args: StdioToWsArgs) {
+export async function stdioToWs(
+  args: StdioToWsArgs,
+  app: express.Express = express(),
+) {
   const { stdioCmd, ...rest } = args
 
-  return multiStdioToWs({
-    ...rest,
-    servers: [
-      {
-        path: '/',
-        stdioCmd,
-      },
-    ],
-  })
+  return multiStdioToWs(
+    {
+      ...rest,
+      servers: [
+        {
+          path: '/',
+          stdioCmd,
+        },
+      ],
+    },
+    app,
+  )
 }
 
-export async function multiStdioToWs(args: MultiStdioToWsArgs) {
+export async function multiStdioToWs(
+  args: MultiStdioToWsArgs,
+  app: express.Express = express(),
+) {
   const { servers, port, messagePath, logger, healthEndpoints, corsOrigin } =
     args
   logger.info(`  - port: ${port}`)
@@ -93,8 +102,6 @@ export async function multiStdioToWs(args: MultiStdioToWsArgs) {
   })
 
   try {
-    const app = express()
-
     if (corsOrigin) {
       app.use(cors({ origin: corsOrigin }))
     }

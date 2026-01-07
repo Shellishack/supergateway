@@ -51,21 +51,30 @@ const joinPath = (base: string, suffix: string) => {
   return `${normalizedBase}${normalizedSuffix}` || '/'
 }
 
-export async function stdioToSse(args: StdioToSseArgs) {
+export async function stdioToSse(
+  args: StdioToSseArgs,
+  app: express.Express = express(),
+) {
   const { stdioCmd, ...rest } = args
 
-  return multiStdioToSse({
-    ...rest,
-    servers: [
-      {
-        path: '/',
-        stdioCmd,
-      },
-    ],
-  })
+  return multiStdioToSse(
+    {
+      ...rest,
+      servers: [
+        {
+          path: '/',
+          stdioCmd,
+        },
+      ],
+    },
+    app,
+  )
 }
 
-export async function multiStdioToSse(args: MultiStdioToSseArgs) {
+export async function multiStdioToSse(
+  args: MultiStdioToSseArgs,
+  app: express.Express = express(),
+) {
   const {
     servers,
     port,
@@ -111,8 +120,6 @@ export async function multiStdioToSse(args: MultiStdioToSseArgs) {
   )
 
   onSignals({ logger })
-
-  const app = express()
 
   if (corsOrigin) {
     app.use(cors({ origin: corsOrigin }))

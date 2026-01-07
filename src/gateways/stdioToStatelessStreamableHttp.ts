@@ -82,22 +82,27 @@ const joinPath = (base: string, suffix: string) => {
 
 export async function stdioToStatelessStreamableHttp(
   args: StdioToStatelessStreamableHttpArgs,
+  app: express.Express = express(),
 ) {
   const { stdioCmd, ...rest } = args
 
-  return multiStdioToStatelessStreamableHttp({
-    ...rest,
-    servers: [
-      {
-        path: '/',
-        stdioCmd,
-      },
-    ],
-  })
+  return multiStdioToStatelessStreamableHttp(
+    {
+      ...rest,
+      servers: [
+        {
+          path: '/',
+          stdioCmd,
+        },
+      ],
+    },
+    app,
+  )
 }
 
 export async function multiStdioToStatelessStreamableHttp(
   args: MultiStdioToStatelessStreamableHttpArgs,
+  app: express.Express = express(),
 ) {
   const {
     servers,
@@ -136,7 +141,6 @@ export async function multiStdioToStatelessStreamableHttp(
 
   onSignals({ logger })
 
-  const app = express()
   app.use(express.json())
 
   if (corsOrigin) {

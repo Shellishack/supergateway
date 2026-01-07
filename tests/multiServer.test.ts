@@ -5,7 +5,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 const PORT = 11006
-const BASE_URL = `http://localhost:${PORT}`
+const BASE_URL = `http://0.0.0.0:${PORT}`
 
 async function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
