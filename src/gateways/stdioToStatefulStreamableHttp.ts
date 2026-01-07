@@ -4,7 +4,7 @@ import { spawn } from 'child_process'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
-import { Logger } from '../types.js'
+import { Logger, MultiStdioServerConfig } from '../types.js'
 import { getVersion } from '../lib/getVersion.js'
 import { onSignals } from '../lib/onSignals.js'
 import { serializeCorsOrigin } from '../lib/serializeCorsOrigin.js'
@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { SessionAccessCounter } from '../lib/sessionAccessCounter.js'
 
-export interface StdioToStreamableHttpArgs {
+interface StdioToStatefulStreamableHttpArgs {
   stdioCmd: string
   port: number
   streamableHttpPath: string
@@ -23,12 +23,7 @@ export interface StdioToStreamableHttpArgs {
   sessionTimeout: number | null
 }
 
-export interface MultiStdioServerConfig {
-  path: string
-  stdioCmd: string
-}
-
-export interface MultiStdioToStreamableHttpArgs {
+interface MultiStdioToStatefulStreamableHttpArgs {
   servers: MultiStdioServerConfig[]
   port: number
   streamableHttpPath: string
@@ -57,7 +52,7 @@ const joinPath = (base: string, suffix: string) => {
 }
 
 export async function stdioToStatefulStreamableHttp(
-  args: StdioToStreamableHttpArgs,
+  args: StdioToStatefulStreamableHttpArgs,
 ) {
   const { stdioCmd, ...rest } = args
 
@@ -73,7 +68,7 @@ export async function stdioToStatefulStreamableHttp(
 }
 
 export async function multiStdioToStatefulStreamableHttp(
-  args: MultiStdioToStreamableHttpArgs,
+  args: MultiStdioToStatefulStreamableHttpArgs,
 ) {
   const {
     servers,

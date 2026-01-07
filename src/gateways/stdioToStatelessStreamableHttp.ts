@@ -7,12 +7,12 @@ import {
   JSONRPCMessage,
   isInitializeRequest,
 } from '@modelcontextprotocol/sdk/types.js'
-import { Logger } from '../types.js'
+import { Logger, MultiStdioServerConfig } from '../types.js'
 import { getVersion } from '../lib/getVersion.js'
 import { onSignals } from '../lib/onSignals.js'
 import { serializeCorsOrigin } from '../lib/serializeCorsOrigin.js'
 
-export interface StdioToStreamableHttpArgs {
+interface StdioToStatelessStreamableHttpArgs {
   stdioCmd: string
   port: number
   streamableHttpPath: string
@@ -23,12 +23,7 @@ export interface StdioToStreamableHttpArgs {
   protocolVersion: string
 }
 
-export interface MultiStdioServerConfig {
-  path: string
-  stdioCmd: string
-}
-
-export interface MultiStdioToStreamableHttpArgs {
+interface MultiStdioToStatelessStreamableHttpArgs {
   servers: MultiStdioServerConfig[]
   port: number
   streamableHttpPath: string
@@ -86,7 +81,7 @@ const joinPath = (base: string, suffix: string) => {
 }
 
 export async function stdioToStatelessStreamableHttp(
-  args: StdioToStreamableHttpArgs,
+  args: StdioToStatelessStreamableHttpArgs,
 ) {
   const { stdioCmd, ...rest } = args
 
@@ -102,7 +97,7 @@ export async function stdioToStatelessStreamableHttp(
 }
 
 export async function multiStdioToStatelessStreamableHttp(
-  args: MultiStdioToStreamableHttpArgs,
+  args: MultiStdioToStatelessStreamableHttpArgs,
 ) {
   const {
     servers,

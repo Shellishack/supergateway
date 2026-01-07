@@ -13,7 +13,7 @@ import { getVersion } from '../lib/getVersion.js'
 import { Logger } from '../types.js'
 import { onSignals } from '../lib/onSignals.js'
 
-export interface SseToStdioArgs {
+interface SseToStdioArgs {
   sseUrl: string
   logger: Logger
   headers: Record<string, string>

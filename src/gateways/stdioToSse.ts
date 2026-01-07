@@ -5,12 +5,12 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
-import { Logger } from '../types.js'
+import { Logger, MultiStdioServerConfig } from '../types.js'
 import { getVersion } from '../lib/getVersion.js'
 import { onSignals } from '../lib/onSignals.js'
 import { serializeCorsOrigin } from '../lib/serializeCorsOrigin.js'
 
-export interface StdioToSseArgs {
+interface StdioToSseArgs {
   stdioCmd: string
   port: number
   baseUrl: string
@@ -22,12 +22,7 @@ export interface StdioToSseArgs {
   headers: Record<string, string>
 }
 
-export interface MultiStdioServerConfig {
-  path: string
-  stdioCmd: string
-}
-
-export interface MultiStdioToSseArgs {
+interface MultiStdioToSseArgs {
   servers: MultiStdioServerConfig[]
   port: number
   baseUrl: string

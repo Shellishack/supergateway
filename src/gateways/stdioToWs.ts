@@ -4,7 +4,7 @@ import { createServer } from 'http'
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
-import { Logger } from '../types.js'
+import { Logger, MultiStdioServerConfig } from '../types.js'
 import { getVersion } from '../lib/getVersion.js'
 import { WebSocketServerTransport } from '../server/websocket.js'
 import { onSignals } from '../lib/onSignals.js'
@@ -17,11 +17,6 @@ export interface StdioToWsArgs {
   logger: Logger
   corsOrigin: CorsOptions['origin']
   healthEndpoints: string[]
-}
-
-export interface MultiStdioServerConfig {
-  path: string
-  stdioCmd: string
 }
 
 export interface MultiStdioToWsArgs {
