@@ -21,6 +21,7 @@
 
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
+import { readFile } from 'node:fs/promises'
 import { stdioToSse } from './gateways/stdioToSse.js'
 import { sseToStdio } from './gateways/sseToStdio.js'
 import { stdioToWs } from './gateways/stdioToWs.js'
@@ -29,13 +30,16 @@ import { headers } from './lib/headers.js'
 import { corsOrigin } from './lib/corsOrigin.js'
 import { getLogger } from './lib/getLogger.js'
 import { stdioToStatelessStreamableHttp } from './gateways/stdioToStatelessStreamableHttp.js'
+import { multiStdioToStatelessStreamableHttp } from './gateways/stdioToStatelessStreamableHttp.js'
 import { stdioToStatefulStreamableHttp } from './gateways/stdioToStatefulStreamableHttp.js'
 
 async function main() {
   const argv = yargs(hideBin(process.argv))
     .option('stdio', {
       type: 'string',
-      description: 'Command to run an MCP server over Stdio',
+      array: true,
+      description:
+        'Command to run an MCP server over Stdio. Can be provided multiple times as name=command for multi-server mode.',
     })
     .option('sse', {
       type: 'string',
@@ -44,6 +48,11 @@ async function main() {
     .option('streamableHttp', {
       type: 'string',
       description: 'Streamable HTTP URL to connect to',
+    })
+    .option('multiServerConfig', {
+      type: 'string',
+      description:
+        'Path to a JSON file defining multiple stdio-backed servers for Streamable HTTP output.',
     })
     .option('outputTransport', {
       type: 'string',
@@ -135,10 +144,18 @@ async function main() {
   const hasStdio = Boolean(argv.stdio)
   const hasSse = Boolean(argv.sse)
   const hasStreamableHttp = Boolean(argv.streamableHttp)
+  const hasMultiServerConfig = Boolean(argv.multiServerConfig)
 
-  const activeCount = [hasStdio, hasSse, hasStreamableHttp].filter(
-    Boolean,
-  ).length
+  const activeCount = [
+    hasStdio,
+    hasSse,
+    hasStreamableHttp,
+    hasMultiServerConfig,
+  ].filter(Boolean).length
+
+  const stdioValues = (argv.stdio as string[] | undefined) ?? []
+  const isStdioMapCli =
+    stdioValues.length > 0 && stdioValues.every((v) => v.includes('='))
 
   const logger = getLogger({
     logLevel: argv.logLevel,
@@ -164,10 +181,175 @@ async function main() {
   logger.info(`  - outputTransport: ${argv.outputTransport}`)
 
   try {
-    if (hasStdio) {
+    // Multi-server modes (Streamable HTTP only)
+    if (hasMultiServerConfig) {
+      if (hasStdio || hasSse || hasStreamableHttp) {
+        logger.error(
+          'Error: --multiServerConfig cannot be combined with --stdio, --sse, or --streamableHttp',
+        )
+        process.exit(1)
+      }
+
+      if (argv.outputTransport !== 'streamableHttp') {
+        logger.error(
+          'Error: --multiServerConfig currently only supports --outputTransport streamableHttp',
+        )
+        process.exit(1)
+      }
+
+      if (argv.stateful) {
+        logger.error(
+          'Error: Multi-server mode currently supports only stateless Streamable HTTP (omit --stateful)',
+        )
+        process.exit(1)
+      }
+
+      const configPath = argv.multiServerConfig as string
+      let configRaw: string
+      try {
+        configRaw = await readFile(configPath, 'utf8')
+      } catch (err) {
+        logger.error(
+          `Error: Failed to read multi-server config file at ${configPath}:`,
+          err,
+        )
+        process.exit(1)
+      }
+
+      let configJson: unknown
+      try {
+        configJson = JSON.parse(configRaw)
+      } catch (err) {
+        logger.error('Error: Failed to parse multi-server config JSON:', err)
+        process.exit(1)
+      }
+
+      const servers =
+        (configJson &&
+          typeof configJson === 'object' &&
+          Array.isArray((configJson as any).servers) &&
+          (configJson as any).servers.map((s: any, index: number) => {
+            if (!s || typeof s !== 'object') {
+              logger.error(
+                `Error: Invalid server entry at index ${index} in multi-server config`,
+              )
+              process.exit(1)
+            }
+
+            const path = typeof s.path === 'string' ? s.path : ''
+            const stdioCmd = typeof s.stdio === 'string' ? s.stdio : ''
+
+            if (!path || !stdioCmd) {
+              logger.error(
+                `Error: Each server in multi-server config must have non-empty "path" and "stdio" fields (index ${index})`,
+              )
+              process.exit(1)
+            }
+
+            const normalizedPath = path.startsWith('/') ? path : `/${path}`
+
+            return {
+              path: normalizedPath,
+              stdioCmd,
+            }
+          })) ||
+        []
+
+      if (!servers.length) {
+        logger.error(
+          'Error: multi-server config must define at least one server in "servers" array',
+        )
+        process.exit(1)
+      }
+
+      await multiStdioToStatelessStreamableHttp({
+        servers,
+        port: argv.port,
+        streamableHttpPath: argv.streamableHttpPath,
+        logger,
+        corsOrigin: corsOrigin({ argv }),
+        healthEndpoints: argv.healthEndpoint as string[],
+        headers: headers({
+          argv,
+          logger,
+        }),
+        protocolVersion: argv.protocolVersion,
+      })
+    } else if (isStdioMapCli) {
+      if (hasSse || hasStreamableHttp) {
+        logger.error(
+          'Error: When using --stdio name=command form, do not also pass --sse or --streamableHttp',
+        )
+        process.exit(1)
+      }
+
+      if (argv.outputTransport !== 'streamableHttp') {
+        logger.error(
+          'Error: Multi-server --stdio name=command form currently only supports --outputTransport streamableHttp',
+        )
+        process.exit(1)
+      }
+
+      if (argv.stateful) {
+        logger.error(
+          'Error: Multi-server mode currently supports only stateless Streamable HTTP (omit --stateful)',
+        )
+        process.exit(1)
+      }
+
+      const servers = stdioValues.map((value, index) => {
+        const eqIndex = value.indexOf('=')
+        if (eqIndex === -1) {
+          logger.error(
+            `Error: Invalid --stdio value at position ${index}. Expected name=command format.`,
+          )
+          process.exit(1)
+        }
+
+        const name = value.slice(0, eqIndex).trim()
+        const cmd = value.slice(eqIndex + 1).trim()
+
+        if (!name || !cmd) {
+          logger.error(
+            `Error: Invalid --stdio value at position ${index}. Both name and command must be non-empty.`,
+          )
+          process.exit(1)
+        }
+
+        const path = name.startsWith('/') ? name : `/${name}`
+
+        return {
+          path,
+          stdioCmd: cmd,
+        }
+      })
+
+      await multiStdioToStatelessStreamableHttp({
+        servers,
+        port: argv.port,
+        streamableHttpPath: argv.streamableHttpPath,
+        logger,
+        corsOrigin: corsOrigin({ argv }),
+        healthEndpoints: argv.healthEndpoint as string[],
+        headers: headers({
+          argv,
+          logger,
+        }),
+        protocolVersion: argv.protocolVersion,
+      })
+    } else if (hasStdio) {
+      const stdioArg = Array.isArray(argv.stdio)
+        ? (argv.stdio[0] as string | undefined)
+        : (argv.stdio as string | undefined)
+
+      if (!stdioArg) {
+        logger.error('Error: --stdio requires a command')
+        process.exit(1)
+      }
+
       if (argv.outputTransport === 'sse') {
         await stdioToSse({
-          stdioCmd: argv.stdio!,
+          stdioCmd: stdioArg,
           port: argv.port,
           baseUrl: argv.baseUrl,
           ssePath: argv.ssePath,
@@ -182,7 +364,7 @@ async function main() {
         })
       } else if (argv.outputTransport === 'ws') {
         await stdioToWs({
-          stdioCmd: argv.stdio!,
+          stdioCmd: stdioArg,
           port: argv.port,
           messagePath: argv.messagePath,
           logger,
@@ -209,7 +391,7 @@ async function main() {
           }
 
           await stdioToStatefulStreamableHttp({
-            stdioCmd: argv.stdio!,
+            stdioCmd: stdioArg,
             port: argv.port,
             streamableHttpPath: argv.streamableHttpPath,
             logger,
@@ -225,7 +407,7 @@ async function main() {
           logger.info('Running stateless server')
 
           await stdioToStatelessStreamableHttp({
-            stdioCmd: argv.stdio!,
+            stdioCmd: stdioArg,
             port: argv.port,
             streamableHttpPath: argv.streamableHttpPath,
             logger,
