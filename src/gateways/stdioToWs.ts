@@ -34,10 +34,7 @@ const joinPath = (base: string, suffix: string) => {
   return `${normalizedBase}${normalizedSuffix}` || '/'
 }
 
-export async function stdioToWs(
-  args: StdioToWsArgs,
-  app: express.Express = express(),
-) {
+export async function stdioToWs(args: StdioToWsArgs, app: express.Express) {
   const { stdioCmd, ...rest } = args
 
   return multiStdioToWs(
@@ -56,7 +53,7 @@ export async function stdioToWs(
 
 export async function multiStdioToWs(
   args: MultiStdioToWsArgs,
-  app: express.Express = express(),
+  app: express.Express,
 ) {
   const { servers, port, messagePath, logger, healthEndpoints, corsOrigin } =
     args

@@ -51,10 +51,7 @@ const joinPath = (base: string, suffix: string) => {
   return `${normalizedBase}${normalizedSuffix}` || '/'
 }
 
-export async function stdioToSse(
-  args: StdioToSseArgs,
-  app: express.Express = express(),
-) {
+export async function stdioToSse(args: StdioToSseArgs, app: express.Express) {
   const { stdioCmd, ...rest } = args
 
   return multiStdioToSse(
@@ -73,7 +70,7 @@ export async function stdioToSse(
 
 export async function multiStdioToSse(
   args: MultiStdioToSseArgs,
-  app: express.Express = express(),
+  app: express.Express,
 ) {
   const {
     servers,
@@ -292,20 +289,15 @@ export async function multiStdioToSse(
     }
   })
 
-  app.listen(port, () => {
-    logger.info(`Listening on port ${port}`)
-    if (serversState.length === 1 && servers[0]?.path === '/') {
-      logger.info(`SSE endpoint: http://localhost:${port}${ssePath}`)
-      logger.info(`POST messages: http://localhost:${port}${messagePath}`)
-    } else {
-      for (const state of serversState) {
-        logger.info(
-          `SSE endpoint: http://localhost:${port}${state.fullSsePath}`,
-        )
-        logger.info(
-          `POST messages: http://localhost:${port}${state.fullMessagePath}`,
-        )
-      }
+  if (serversState.length === 1 && servers[0]?.path === '/') {
+    logger.info(`SSE endpoint: http://localhost:${port}${ssePath}`)
+    logger.info(`POST messages: http://localhost:${port}${messagePath}`)
+  } else {
+    for (const state of serversState) {
+      logger.info(`SSE endpoint: http://localhost:${port}${state.fullSsePath}`)
+      logger.info(
+        `POST messages: http://localhost:${port}${state.fullMessagePath}`,
+      )
     }
-  })
+  }
 }

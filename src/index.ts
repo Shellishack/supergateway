@@ -35,6 +35,7 @@ import {
   stdioToStatefulStreamableHttp,
   multiStdioToStatefulStreamableHttp,
 } from './gateways/stdioToStatefulStreamableHttp.js'
+import express from 'express'
 
 async function main() {
   const argv = yargs(hideBin(process.argv))
@@ -251,35 +252,57 @@ async function main() {
 
       if (argv.outputTransport === 'streamableHttp') {
         if (argv.stateful) {
-          await multiStdioToStatefulStreamableHttp({
-            servers,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+          const app = express()
+
+          await multiStdioToStatefulStreamableHttp(
+            {
+              servers,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            sessionTimeout:
-              typeof argv.sessionTimeout === 'number'
-                ? argv.sessionTimeout
-                : null,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              sessionTimeout:
+                typeof argv.sessionTimeout === 'number'
+                  ? argv.sessionTimeout
+                  : null,
+            },
+            app,
+          )
+
+          app.listen(argv.port, () => {
+            logger.info(
+              `Stateful Streamable HTTP multi-server listening on port ${argv.port}`,
+            )
           })
         } else {
-          await multiStdioToStatelessStreamableHttp({
-            servers,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+          const app = express()
+
+          await multiStdioToStatelessStreamableHttp(
+            {
+              servers,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            protocolVersion: argv.protocolVersion,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              protocolVersion: argv.protocolVersion,
+            },
+            app,
+          )
+
+          app.listen(argv.port, () => {
+            logger.info(
+              `Stateless Streamable HTTP multi-server listening on port ${argv.port}`,
+            )
           })
         }
       } else if (argv.outputTransport === 'sse') {
@@ -290,19 +313,28 @@ async function main() {
           process.exit(1)
         }
 
-        await multiStdioToSse({
-          servers,
-          port: argv.port,
-          baseUrl: argv.baseUrl,
-          ssePath: argv.ssePath,
-          messagePath: argv.messagePath,
-          logger,
-          corsOrigin: corsOrigin({ argv }),
-          healthEndpoints: argv.healthEndpoint as string[],
-          headers: headers({
-            argv,
+        const app = express()
+
+        await multiStdioToSse(
+          {
+            servers,
+            port: argv.port,
+            baseUrl: argv.baseUrl,
+            ssePath: argv.ssePath,
+            messagePath: argv.messagePath,
             logger,
-          }),
+            corsOrigin: corsOrigin({ argv }),
+            healthEndpoints: argv.healthEndpoint as string[],
+            headers: headers({
+              argv,
+              logger,
+            }),
+          },
+          app,
+        )
+
+        app.listen(argv.port, () => {
+          logger.info(`SSE multi-server listening on port ${argv.port}`)
         })
       } else if (argv.outputTransport === 'ws') {
         if (argv.stateful) {
@@ -312,14 +344,19 @@ async function main() {
           process.exit(1)
         }
 
-        await multiStdioToWs({
-          servers,
-          port: argv.port,
-          messagePath: argv.messagePath,
-          logger,
-          corsOrigin: corsOrigin({ argv }),
-          healthEndpoints: argv.healthEndpoint as string[],
-        })
+        const app = express()
+
+        await multiStdioToWs(
+          {
+            servers,
+            port: argv.port,
+            messagePath: argv.messagePath,
+            logger,
+            corsOrigin: corsOrigin({ argv }),
+            healthEndpoints: argv.healthEndpoint as string[],
+          },
+          app,
+        )
       } else {
         logger.error(
           'Error: --multiServerConfig requires --outputTransport sse, ws, or streamableHttp',
@@ -363,35 +400,56 @@ async function main() {
 
       if (argv.outputTransport === 'streamableHttp') {
         if (argv.stateful) {
-          await multiStdioToStatefulStreamableHttp({
-            servers,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+          const app = express()
+
+          await multiStdioToStatefulStreamableHttp(
+            {
+              servers,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            sessionTimeout:
-              typeof argv.sessionTimeout === 'number'
-                ? argv.sessionTimeout
-                : null,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              sessionTimeout:
+                typeof argv.sessionTimeout === 'number'
+                  ? argv.sessionTimeout
+                  : null,
+            },
+            app,
+          )
+          app.listen(argv.port, () => {
+            logger.info(
+              `Stateful Streamable HTTP multi-server listening on port ${argv.port}`,
+            )
           })
         } else {
-          await multiStdioToStatelessStreamableHttp({
-            servers,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+          const app = express()
+
+          await multiStdioToStatelessStreamableHttp(
+            {
+              servers,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            protocolVersion: argv.protocolVersion,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              protocolVersion: argv.protocolVersion,
+            },
+            app,
+          )
+
+          app.listen(argv.port, () => {
+            logger.info(
+              `Stateless Streamable HTTP multi-server listening on port ${argv.port}`,
+            )
           })
         }
       } else if (argv.outputTransport === 'sse') {
@@ -402,19 +460,28 @@ async function main() {
           process.exit(1)
         }
 
-        await multiStdioToSse({
-          servers,
-          port: argv.port,
-          baseUrl: argv.baseUrl,
-          ssePath: argv.ssePath,
-          messagePath: argv.messagePath,
-          logger,
-          corsOrigin: corsOrigin({ argv }),
-          healthEndpoints: argv.healthEndpoint as string[],
-          headers: headers({
-            argv,
+        const app = express()
+
+        await multiStdioToSse(
+          {
+            servers,
+            port: argv.port,
+            baseUrl: argv.baseUrl,
+            ssePath: argv.ssePath,
+            messagePath: argv.messagePath,
             logger,
-          }),
+            corsOrigin: corsOrigin({ argv }),
+            healthEndpoints: argv.healthEndpoint as string[],
+            headers: headers({
+              argv,
+              logger,
+            }),
+          },
+          app,
+        )
+
+        app.listen(argv.port, () => {
+          logger.info(`SSE multi-server listening on port ${argv.port}`)
         })
       } else if (argv.outputTransport === 'ws') {
         if (argv.stateful) {
@@ -424,14 +491,19 @@ async function main() {
           process.exit(1)
         }
 
-        await multiStdioToWs({
-          servers,
-          port: argv.port,
-          messagePath: argv.messagePath,
-          logger,
-          corsOrigin: corsOrigin({ argv }),
-          healthEndpoints: argv.healthEndpoint as string[],
-        })
+        const app = express()
+
+        await multiStdioToWs(
+          {
+            servers,
+            port: argv.port,
+            messagePath: argv.messagePath,
+            logger,
+            corsOrigin: corsOrigin({ argv }),
+            healthEndpoints: argv.healthEndpoint as string[],
+          },
+          app,
+        )
       } else {
         logger.error(
           'Error: Multi-server --stdio name=command form requires --outputTransport sse, ws, or streamableHttp',
@@ -449,29 +521,43 @@ async function main() {
       }
 
       if (argv.outputTransport === 'sse') {
-        await stdioToSse({
-          stdioCmd: stdioArg,
-          port: argv.port,
-          baseUrl: argv.baseUrl,
-          ssePath: argv.ssePath,
-          messagePath: argv.messagePath,
-          logger,
-          corsOrigin: corsOrigin({ argv }),
-          healthEndpoints: argv.healthEndpoint as string[],
-          headers: headers({
-            argv,
+        const app = express()
+
+        await stdioToSse(
+          {
+            stdioCmd: stdioArg,
+            port: argv.port,
+            baseUrl: argv.baseUrl,
+            ssePath: argv.ssePath,
+            messagePath: argv.messagePath,
             logger,
-          }),
+            corsOrigin: corsOrigin({ argv }),
+            healthEndpoints: argv.healthEndpoint as string[],
+            headers: headers({
+              argv,
+              logger,
+            }),
+          },
+          app,
+        )
+
+        app.listen(argv.port, () => {
+          logger.info(`SSE server listening on port ${argv.port}`)
         })
       } else if (argv.outputTransport === 'ws') {
-        await stdioToWs({
-          stdioCmd: stdioArg,
-          port: argv.port,
-          messagePath: argv.messagePath,
-          logger,
-          corsOrigin: corsOrigin({ argv }),
-          healthEndpoints: argv.healthEndpoint as string[],
-        })
+        const app = express()
+
+        await stdioToWs(
+          {
+            stdioCmd: stdioArg,
+            port: argv.port,
+            messagePath: argv.messagePath,
+            logger,
+            corsOrigin: corsOrigin({ argv }),
+            healthEndpoints: argv.healthEndpoint as string[],
+          },
+          app,
+        )
       } else if (argv.outputTransport === 'streamableHttp') {
         const stateful = argv.stateful
         if (stateful) {
@@ -491,34 +577,56 @@ async function main() {
             sessionTimeout = null
           }
 
-          await stdioToStatefulStreamableHttp({
-            stdioCmd: stdioArg,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+          const app = express()
+
+          await stdioToStatefulStreamableHttp(
+            {
+              stdioCmd: stdioArg,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            sessionTimeout,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              sessionTimeout,
+            },
+            app,
+          )
+
+          app.listen(argv.port, () => {
+            logger.info(
+              `Stateful Streamable HTTP server listening on port ${argv.port}`,
+            )
           })
         } else {
           logger.info('Running stateless server')
 
-          await stdioToStatelessStreamableHttp({
-            stdioCmd: stdioArg,
-            port: argv.port,
-            streamableHttpPath: argv.streamableHttpPath,
-            logger,
-            corsOrigin: corsOrigin({ argv }),
-            healthEndpoints: argv.healthEndpoint as string[],
-            headers: headers({
-              argv,
+          const app = express()
+
+          await stdioToStatelessStreamableHttp(
+            {
+              stdioCmd: stdioArg,
+              port: argv.port,
+              streamableHttpPath: argv.streamableHttpPath,
               logger,
-            }),
-            protocolVersion: argv.protocolVersion,
+              corsOrigin: corsOrigin({ argv }),
+              healthEndpoints: argv.healthEndpoint as string[],
+              headers: headers({
+                argv,
+                logger,
+              }),
+              protocolVersion: argv.protocolVersion,
+            },
+            app,
+          )
+
+          app.listen(argv.port, () => {
+            logger.info(
+              `Stateless Streamable HTTP server listening on port ${argv.port}`,
+            )
           })
         }
       } else {

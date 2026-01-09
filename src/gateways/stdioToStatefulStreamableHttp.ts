@@ -53,7 +53,7 @@ const joinPath = (base: string, suffix: string) => {
 
 export async function stdioToStatefulStreamableHttp(
   args: StdioToStatefulStreamableHttpArgs,
-  app: express.Express = express(),
+  app: express.Express,
 ) {
   const { stdioCmd, ...rest } = args
 
@@ -73,7 +73,7 @@ export async function stdioToStatefulStreamableHttp(
 
 export async function multiStdioToStatefulStreamableHttp(
   args: MultiStdioToStatefulStreamableHttpArgs,
-  app: express.Express = express(),
+  app: express.Express,
 ) {
   const {
     servers,
@@ -349,19 +349,16 @@ export async function multiStdioToStatefulStreamableHttp(
     app.delete(fullPath, handleSessionRequest)
   }
 
-  app.listen(port, () => {
-    logger.info(`Listening on port ${port}`)
-    if (servers.length === 1 && servers[0]?.path === '/') {
+  if (servers.length === 1 && servers[0]?.path === '/') {
+    logger.info(
+      `StreamableHttp endpoint: http://localhost:${port}${streamableHttpPath}`,
+    )
+  } else {
+    for (const serverConfig of servers) {
+      const fullPath = joinPath(serverConfig.path || '/', streamableHttpPath)
       logger.info(
-        `StreamableHttp endpoint: http://localhost:${port}${streamableHttpPath}`,
+        `StreamableHttp endpoint: http://localhost:${port}${fullPath}`,
       )
-    } else {
-      for (const serverConfig of servers) {
-        const fullPath = joinPath(serverConfig.path || '/', streamableHttpPath)
-        logger.info(
-          `StreamableHttp endpoint: http://localhost:${port}${fullPath}`,
-        )
-      }
     }
-  })
+  }
 }
