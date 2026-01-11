@@ -85,7 +85,7 @@ export async function multiStdioToSse(
   } = args
 
   logger.info(
-    `  - Headers: ${Object(headers).length ? JSON.stringify(headers) : '(none)'}`,
+    `  - Headers: ${Object.keys(headers).length ? JSON.stringify(headers) : '(none)'}`,
   )
   logger.info(`  - port: ${port}`)
   if (servers.length === 1 && servers[0]?.path === '/') {
