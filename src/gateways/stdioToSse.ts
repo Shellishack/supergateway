@@ -160,11 +160,6 @@ export async function multiStdioToSse(
       process.exit(code ?? 1)
     })
 
-    const server = new Server(
-      { name: 'supergateway', version: getVersion() },
-      { capabilities: {} },
-    )
-
     const sessions: Record<string, SessionInfo> = {}
 
     const fullSsePath = joinPath(serverConfig.path || '/', ssePath)
@@ -175,16 +170,20 @@ export async function multiStdioToSse(
         `New SSE connection from ${req.ip} on ${fullSsePath} (${serverConfig.stdioCmd})`,
       )
 
-      setResponseHeaders({
-        res,
-        headers,
-      })
+      setResponseHeaders({ res, headers })
+
+      // Create a fresh Server for each connection
+      const connectionServer = new Server(
+        { name: 'supergateway', version: getVersion() },
+        { capabilities: {} },
+      )
 
       const sseTransport = new SSEServerTransport(
         `${baseUrl}${fullMessagePath}`,
         res,
       )
-      await server.connect(sseTransport)
+
+      await connectionServer.connect(sseTransport)
 
       const sessionId = sseTransport.sessionId
       if (sessionId) {
@@ -198,26 +197,28 @@ export async function multiStdioToSse(
         child.stdin.write(JSON.stringify(msg) + '\n')
       }
 
-      sseTransport.onclose = () => {
+      const cleanup = async () => {
         logger.info(
           `SSE connection closed (session ${sessionId}, path ${fullSsePath})`,
         )
         delete sessions[sessionId]
+        await connectionServer.close?.()
       }
 
-      sseTransport.onerror = (err) => {
+      sseTransport.onclose = cleanup
+      sseTransport.onerror = async (err) => {
         logger.error(
           `SSE error (session ${sessionId}, path ${fullSsePath}):`,
           err,
         )
-        delete sessions[sessionId]
+        await cleanup()
       }
 
-      req.on('close', () => {
+      req.on('close', async () => {
         logger.info(
           `Client disconnected (session ${sessionId}, path ${fullSsePath})`,
         )
-        delete sessions[sessionId]
+        await cleanup()
       })
     })
 
@@ -282,7 +283,6 @@ export async function multiStdioToSse(
 
     return {
       child,
-      server,
       sessions,
       fullSsePath,
       fullMessagePath,
